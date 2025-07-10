@@ -1,189 +1,224 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-  <meta charset="UTF-8">
-  <title>수박 게임</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <meta charset="UTF-8" />
+  <title>완벽한 수박 게임</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
   <style>
-    *, *::before, *::after { box-sizing: border-box; }
     html, body {
-      margin: 0;
-      padding: 0;
+      margin: 0; padding: 0;
       background: #f0ebe1;
-      font-family: 'Segoe UI', sans-serif;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
       touch-action: none;
+      overflow: hidden;
     }
     #ui {
-      position: absolute;
-      top: 5px; width: 100%; text-align: center;
-      z-index: 10;
+      position: fixed;
+      top: 8px; width: 100%;
+      text-align: center;
+      z-index: 100;
+      user-select: none;
     }
     #score {
-      font-size: 22px; font-weight: bold; color: #333;
-    }
-    #previewWrapper {
-      margin-top: 8px;
-      display: flex; justify-content: center;
+      font-size: 24px;
+      font-weight: 700;
+      color: #333;
+      margin-bottom: 6px;
+      text-shadow: 0 0 2px #fff;
     }
     #preview {
-      border: 2px solid #aaa;
+      width: 60px; height: 60px;
+      margin: 0 auto;
       border-radius: 50%;
-      transition: all 0.15s ease;
+      border: 2px solid #999;
+      background-color: #eee;
+      box-shadow: inset 0 0 6px #ccc;
     }
     #gameOver {
-      position: absolute; top:50%; left:50%;
-      transform: translate(-50%,-50%);
-      background: white;
-      padding: 20px;
-      border-radius:10px;
-      box-shadow: 0 0 10px rgba(0,0,0,0.2);
-      text-align:center;
-      font-size: 24px;
+      position: fixed;
+      top: 50%; left: 50%;
+      transform: translate(-50%, -50%);
+      background: #fff;
+      border-radius: 12px;
+      padding: 30px 40px;
+      font-size: 26px;
+      font-weight: 700;
+      color: #a00;
+      box-shadow: 0 0 15px rgba(160,0,0,0.3);
       display: none;
-      z-index: 20;
+      user-select: none;
+      z-index: 999;
+      text-align: center;
     }
-    canvas {
+    canvas#gameCanvas {
       display: block;
       margin: 60px auto 0;
       background: #fffbe6;
-      border-radius: 10px;
-      box-shadow: 0 0 8px rgba(0,0,0,0.1);
+      border-radius: 12px;
+      box-shadow: 0 0 12px rgba(0,0,0,0.1);
       touch-action: none;
+      max-width: 100vw;
+      height: 600px;
+      width: 360px;
     }
   </style>
 </head>
 <body>
   <div id="ui">
     <div id="score">Score: 0</div>
-    <div id="previewWrapper">
-      <canvas id="preview" width="60" height="60"></canvas>
-    </div>
+    <canvas id="preview" width="60" height="60"></canvas>
   </div>
   <canvas id="gameCanvas" width="360" height="600"></canvas>
-  <div id="gameOver">게임 오버!<br>🔄 새로고침해서 다시 시작</div>
+  <div id="gameOver">게임 오버!<br>🔄 새로고침해서 다시 시작하세요</div>
 
   <script src="https://cdn.jsdelivr.net/npm/matter-js@0.19.0/build/matter.min.js"></script>
   <script>
-    const { Engine, Render, Runner, World, Bodies, Body, Events } = Matter;
+    const { Engine, Render, Runner, World, Bodies, Events } = Matter;
 
-    // 물리 엔진 설정
     const engine = Engine.create();
     const world = engine.world;
-    const canvas = document.getElementById("gameCanvas");
+
+    const canvas = document.getElementById('gameCanvas');
     const render = Render.create({
-      element: document.body,
       canvas,
       engine,
       options: {
-        width: 360, height: 600, wireframes: false, background: "#fffbe6"
-      }
+        width: 360,
+        height: 600,
+        wireframes: false,
+        background: '#fffbe6',
+      },
     });
     Render.run(render);
     Runner.run(Runner.create(), engine);
 
-    // 벽 설정
-    World.add(world, [
+    // 벽 세팅
+    const walls = [
       Bodies.rectangle(180, 600, 360, 20, { isStatic: true }),
       Bodies.rectangle(0, 300, 20, 600, { isStatic: true }),
-      Bodies.rectangle(360, 300, 20, 600, { isStatic: true })
-    ]);
+      Bodies.rectangle(360, 300, 20, 600, { isStatic: true }),
+    ];
+    World.add(world, walls);
 
-    // 과일 데이터
-    const colors = ["#FF6B6B", "#FFD93D", "#6BCB77", "#4D96FF", "#C780FA", "#FFA07A", "#00CED1", "#FF69B4"];
+    // 과일 속성
+    const colors = ['#FF6B6B', '#FFD93D', '#6BCB77', '#4D96FF', '#C780FA', '#FFA07A', '#00CED1', '#FF69B4'];
     const sizes = [14, 18, 22, 26, 32, 38, 46, 54];
-    const scores = [10,20,40,80,160,300,600,1000];
+    const scores = [10, 20, 40, 80, 160, 300, 600, 1000];
 
-    let fruits = [], score = 0;
-    let currentType = randomType(), nextType = randomType();
+    let fruits = [];
+    let score = 0;
 
-    // UI 요소
-    const scoreDiv = document.getElementById("score");
-    const previewCanvas = document.getElementById("preview");
-    const previewCtx = previewCanvas.getContext("2d");
-    const gameOverDiv = document.getElementById("gameOver");
+    const scoreDiv = document.getElementById('score');
+    const previewCanvas = document.getElementById('preview');
+    const previewCtx = previewCanvas.getContext('2d');
+    const gameOverDiv = document.getElementById('gameOver');
 
-    function randomType() {
-      return Math.floor(Math.random()*3);
+    // 초기 과일 타입 결정
+    let currentType = getRandomType();
+    let nextType = getRandomType();
+
+    function getRandomType() {
+      return Math.floor(Math.random() * 3);
     }
 
+    // 미리보기 그리기
     function drawPreview() {
-      const ctx = previewCtx;
       const r = sizes[nextType];
-      ctx.clearRect(0,0,60,60);
-      ctx.beginPath();
-      ctx.arc(30,30,r,0,2*Math.PI);
-      ctx.fillStyle = colors[nextType];
-      ctx.fill();
+      previewCtx.clearRect(0, 0, 60, 60);
+      previewCtx.beginPath();
+      previewCtx.arc(30, 30, r, 0, Math.PI * 2);
+      previewCtx.fillStyle = colors[nextType];
+      previewCtx.fill();
+      previewCtx.lineWidth = 2;
+      previewCtx.strokeStyle = '#999';
+      previewCtx.stroke();
     }
+
     drawPreview();
 
-    // 과일 생성
+    // 과일 생성 함수
     function spawnFruit(x) {
-      const type = currentType;
-      const body = Bodies.circle(x, -20, sizes[type], {
-        restitution: 0.25, friction: 0.01,
-        render: { fillStyle: colors[type] }
+      const r = sizes[currentType];
+      const fruit = Bodies.circle(x, -30, r, {
+        restitution: 0.25,
+        friction: 0.01,
+        render: {
+          fillStyle: colors[currentType],
+        },
       });
-      body.fruitType = type;
-      fruits.push(body);
-      World.add(world, body);
+      fruit.fruitType = currentType;
+      fruits.push(fruit);
+      World.add(world, fruit);
 
       currentType = nextType;
-      nextType = randomType();
+      nextType = getRandomType();
       drawPreview();
     }
 
-    // 병합 로직
-    function mergeFruits() {
-      for(let i=0;i<fruits.length;i++){
-        const a = fruits[i]; if(!a) continue;
-        for(let j=i+1;j<fruits.length;j++){
-          const b = fruits[j]; if(!b||a.fruitType!==b.fruitType) continue;
-          const dx=a.position.x-b.position.x, dy=a.position.y-b.position.y;
-          const dist=Math.hypot(dx,dy);
-          const min = a.circleRadius + b.circleRadius;
-          if(dist<min*0.8){
-            const nt=a.fruitType+1;
-            if(nt>=sizes.length) continue;
-            const body = Bodies.circle((a.position.x+b.position.x)/2,(a.position.y+b.position.y)/2,sizes[nt],{
-              restitution:0.25, friction:0.01,
-              render:{ fillStyle: colors[nt] }
-            });
-            body.fruitType = nt;
-            World.add(world, body);
-            fruits.push(body);
+    // 병합 처리 (충돌 이벤트에서 처리)
+    function tryMerge(a, b) {
+      if (a.fruitType !== b.fruitType) return false;
+      const newType = a.fruitType + 1;
+      if (newType >= sizes.length) return false;
 
-            World.remove(world, a);
-            World.remove(world, b);
-            fruits[i]=null; fruits[j]=null;
+      const newRadius = sizes[newType];
+      const newX = (a.position.x + b.position.x) / 2;
+      const newY = (a.position.y + b.position.y) / 2;
 
-            score += scores[nt];
-            scoreDiv.textContent = "Score: "+score;
-            return;
-          }
-        }
-      }
+      const newFruit = Bodies.circle(newX, newY, newRadius, {
+        restitution: 0.25,
+        friction: 0.01,
+        render: { fillStyle: colors[newType] },
+      });
+      newFruit.fruitType = newType;
+
+      World.add(world, newFruit);
+
+      // 과일 배열 관리
+      fruits = fruits.filter(f => f !== a && f !== b);
+      World.remove(world, a);
+      World.remove(world, b);
+      fruits.push(newFruit);
+
+      score += scores[newType];
+      scoreDiv.textContent = `Score: ${score}`;
+
+      return true;
     }
 
-    Events.on(engine, "afterUpdate",()=>{
-      mergeFruits();
-      for(const f of fruits){
-        if(f && f.position.y < -50){
-          gameOverDiv.style.display = "block";
-          Runner.stop(engine);
+    // 충돌 감지 이벤트 등록
+    Events.on(engine, 'collisionStart', event => {
+      const pairs = event.pairs;
+      for (let pair of pairs) {
+        const { bodyA, bodyB } = pair;
+        if (fruits.includes(bodyA) && fruits.includes(bodyB)) {
+          // 시도해보고 병합되면 반복 종료 (한번에 한쌍만 병합)
+          if (tryMerge(bodyA, bodyB)) break;
+        }
+      }
+    });
+
+    // 게임 오버 조건 감지
+    Events.on(engine, 'afterUpdate', () => {
+      for (let f of fruits) {
+        if (f.position.y < -50) {
+          gameOverDiv.style.display = 'block';
+          Runner.stop(engine.runner);
+          canvas.removeEventListener('pointerdown', onPointerDown);
           break;
         }
       }
     });
 
-    // 터치/클릭 처리
-    function onPointerDown(e){
-      const x = e.clientX || (e.touches&&e.touches[0].clientX);
-      if(!x) return;
+    // 터치/클릭 이벤트 핸들러
+    function onPointerDown(e) {
+      const x = e.clientX || (e.touches && e.touches[0].clientX);
+      if (!x) return;
       const rect = canvas.getBoundingClientRect();
       spawnFruit(x - rect.left);
     }
-    canvas.addEventListener("pointerdown", onPointerDown);
+
+    canvas.addEventListener('pointerdown', onPointerDown);
 
   </script>
 </body>
