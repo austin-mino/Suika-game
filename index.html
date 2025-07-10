@@ -5,11 +5,12 @@
   <title>수박 게임</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
   <style>
-    body {
+    html, body {
       margin: 0;
+      padding: 0;
       background: #fffdf4;
       font-family: 'Segoe UI', sans-serif;
-      touch-action: manipulation;
+      touch-action: none;
     }
     #gameCanvas {
       display: block;
@@ -17,6 +18,7 @@
       background: #faf8ef;
       border-radius: 10px;
       box-shadow: 0 0 10px rgba(0,0,0,0.1);
+      touch-action: none;
     }
     #ui {
       position: absolute;
@@ -27,10 +29,32 @@
       z-index: 10;
     }
     #score {
-      font-size: 20px;
+      font-size: 18px;
       font-weight: bold;
       color: #333;
-      margin-bottom: 10px;
+      margin-bottom: 5px;
+    }
+    #tip {
+      font-size: 14px;
+      color: #999;
+      margin-bottom: 8px;
+    }
+    #preview {
+      margin: 0 auto;
+      width: 60px;
+      height: 60px;
+      border-radius: 50%;
+      border: 2px solid #aaa;
+      background: #fff;
+      position: relative;
+    }
+    #previewCircle {
+      width: 100%;
+      height: 100%;
+      border-radius: 50%;
+      position: absolute;
+      top: 0;
+      left: 0;
     }
     #gameOver {
       position: absolute;
@@ -45,10 +69,7 @@
       box-shadow: 0 0 10px rgba(0,0,0,0.2);
       display: none;
       z-index: 20;
-    }
-    #tip {
-      font-size: 14px;
-      color: #999;
+      text-align: center;
     }
   </style>
 </head>
@@ -56,7 +77,8 @@
 
 <div id="ui">
   <div id="score">Score: 0</div>
-  <div id="tip">화면을 톡! 눌러 과일을 떨어뜨리세요 🍒</div>
+  <div id="tip">다음 과일 🍉</div>
+  <div id="preview"><div id="previewCircle"></div></div>
 </div>
 <canvas id="gameCanvas" width="360" height="600"></canvas>
 <div id="gameOver">게임 오버!<br>🔄 새로고침으로 다시 시작</div>
@@ -99,11 +121,20 @@
   const fruitScores = [10, 20, 30, 40, 60, 80, 100, 120, 150, 200];
 
   const fruits = [];
-  let currentType = 0;
-  let score = 0;
+  let currentType = Math.floor(Math.random() * 3); // 처음 미리보기용
+  let nextType = Math.floor(Math.random() * 3);
 
   const scoreDiv = document.getElementById("score");
   const gameOverDiv = document.getElementById("gameOver");
+  const previewCircle = document.getElementById("previewCircle");
+
+  function updatePreview() {
+    const size = fruitSizes[nextType] * 2;
+    previewCircle.style.width = `${size * 0.8}px`;
+    previewCircle.style.height = `${size * 0.8}px`;
+    previewCircle.style.backgroundColor = fruitColors[nextType];
+    previewCircle.style.margin = `${30 - size * 0.4}px auto`;
+  }
 
   function spawnFruit(x) {
     const r = fruitSizes[currentType];
@@ -115,7 +146,11 @@
     fruit.fruitType = currentType;
     fruits.push(fruit);
     World.add(world, fruit);
-    currentType = Math.floor(Math.random() * 3);
+
+    // 다음 과일 설정
+    currentType = nextType;
+    nextType = Math.floor(Math.random() * 3);
+    updatePreview();
   }
 
   function mergeFruits() {
@@ -169,16 +204,16 @@
     }
   });
 
-  // 톡! 누르면 과일 떨어지기 (모바일 대응)
   function handleInput(e) {
-    const x = e.touches ? e.touches[0].clientX : e.clientX;
+    const x = e.clientX || (e.touches ? e.touches[0].clientX : 180);
     const rect = canvas.getBoundingClientRect();
     const posX = x - rect.left;
     spawnFruit(posX);
   }
 
-  canvas.addEventListener("touchstart", handleInput, { passive: true });
-  canvas.addEventListener("click", handleInput);
+  canvas.addEventListener("pointerdown", handleInput);
+
+  updatePreview(); // 최초 1회 호출
 </script>
 </body>
 </html>
