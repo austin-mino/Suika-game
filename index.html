@@ -5,203 +5,186 @@
   <title>수박 게임</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
   <style>
-    * { box-sizing: border-box; }
-    body {
+    *, *::before, *::after { box-sizing: border-box; }
+    html, body {
       margin: 0;
       padding: 0;
-      background: #f7f1e3;
+      background: #f0ebe1;
       font-family: 'Segoe UI', sans-serif;
       touch-action: none;
     }
     #ui {
       position: absolute;
-      top: 10px;
-      left: 0;
-      right: 0;
-      text-align: center;
+      top: 5px; width: 100%; text-align: center;
       z-index: 10;
     }
     #score {
-      font-size: 20px;
-      font-weight: bold;
-      color: #333;
-      margin-bottom: 4px;
+      font-size: 22px; font-weight: bold; color: #333;
     }
     #previewWrapper {
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      height: 60px;
+      margin-top: 8px;
+      display: flex; justify-content: center;
     }
     #preview {
-      width: 40px;
-      height: 40px;
+      border: 2px solid #aaa;
       border-radius: 50%;
-      border: 2px solid #ccc;
-      background: #eee;
-      transition: all 0.2s ease;
+      transition: all 0.15s ease;
     }
     #gameOver {
-      position: absolute;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
+      position: absolute; top:50%; left:50%;
+      transform: translate(-50%,-50%);
       background: white;
-      border: 2px solid #aaa;
       padding: 20px;
-      font-size: 22px;
-      text-align: center;
-      border-radius: 10px;
+      border-radius:10px;
       box-shadow: 0 0 10px rgba(0,0,0,0.2);
-      z-index: 20;
+      text-align:center;
+      font-size: 24px;
       display: none;
+      z-index: 20;
     }
     canvas {
       display: block;
-      margin: 0 auto;
+      margin: 60px auto 0;
       background: #fffbe6;
-      border-top: 3px solid #ddd;
+      border-radius: 10px;
+      box-shadow: 0 0 8px rgba(0,0,0,0.1);
       touch-action: none;
     }
   </style>
 </head>
 <body>
-<div id="ui">
-  <div id="score">Score: 0</div>
-  <div id="previewWrapper">
-    <div id="preview"></div>
+  <div id="ui">
+    <div id="score">Score: 0</div>
+    <div id="previewWrapper">
+      <canvas id="preview" width="60" height="60"></canvas>
+    </div>
   </div>
-</div>
-<canvas id="gameCanvas" width="360" height="600"></canvas>
-<div id="gameOver">게임 오버!<br>🔄 새로고침으로 다시 시작</div>
+  <canvas id="gameCanvas" width="360" height="600"></canvas>
+  <div id="gameOver">게임 오버!<br>🔄 새로고침해서 다시 시작</div>
 
-<script src="https://cdn.jsdelivr.net/npm/matter-js@0.19.0/build/matter.min.js"></script>
-<script>
-  const { Engine, Render, Runner, World, Bodies, Body, Events } = Matter;
-  const engine = Engine.create();
-  const world = engine.world;
+  <script src="https://cdn.jsdelivr.net/npm/matter-js@0.19.0/build/matter.min.js"></script>
+  <script>
+    const { Engine, Render, Runner, World, Bodies, Body, Events } = Matter;
 
-  const canvas = document.getElementById("gameCanvas");
-  const render = Render.create({
-    canvas,
-    engine,
-    options: {
-      width: 360,
-      height: 600,
-      wireframes: false,
-      background: "#fffbe6"
-    }
-  });
-  Render.run(render);
-  const runner = Runner.create();
-  Runner.run(runner, engine);
-
-  const walls = [
-    Bodies.rectangle(180, 600, 360, 20, { isStatic: true }),
-    Bodies.rectangle(0, 300, 20, 600, { isStatic: true }),
-    Bodies.rectangle(360, 300, 20, 600, { isStatic: true })
-  ];
-  World.add(world, walls);
-
-  const fruitColors = ["#FF6B6B", "#FFD93D", "#6BCB77", "#4D96FF", "#C780FA", "#FFA07A", "#00CED1", "#FF69B4"];
-  const fruitSizes = [16, 20, 24, 28, 34, 40, 48, 56];
-  const fruitScores = [10, 20, 40, 80, 160, 300, 600, 1000];
-
-  let currentType = Math.floor(Math.random() * 3);
-  let nextType = Math.floor(Math.random() * 3);
-  let fruits = [];
-  let score = 0;
-
-  const scoreDiv = document.getElementById("score");
-  const preview = document.getElementById("preview");
-  const gameOverDiv = document.getElementById("gameOver");
-
-  function updatePreview() {
-    const r = fruitSizes[nextType];
-    preview.style.background = fruitColors[nextType];
-    preview.style.width = r * 1.2 + "px";
-    preview.style.height = r * 1.2 + "px";
-  }
-
-  updatePreview();
-
-  function spawnFruit(x) {
-    const r = fruitSizes[currentType];
-    const fruit = Bodies.circle(x, 0, r, {
-      restitution: 0.2,
-      friction: 0.01,
-      render: { fillStyle: fruitColors[currentType] }
+    // 물리 엔진 설정
+    const engine = Engine.create();
+    const world = engine.world;
+    const canvas = document.getElementById("gameCanvas");
+    const render = Render.create({
+      element: document.body,
+      canvas,
+      engine,
+      options: {
+        width: 360, height: 600, wireframes: false, background: "#fffbe6"
+      }
     });
-    fruit.fruitType = currentType;
-    fruits.push(fruit);
-    World.add(world, fruit);
+    Render.run(render);
+    Runner.run(Runner.create(), engine);
 
-    currentType = nextType;
-    nextType = Math.floor(Math.random() * 3);
-    updatePreview();
-  }
+    // 벽 설정
+    World.add(world, [
+      Bodies.rectangle(180, 600, 360, 20, { isStatic: true }),
+      Bodies.rectangle(0, 300, 20, 600, { isStatic: true }),
+      Bodies.rectangle(360, 300, 20, 600, { isStatic: true })
+    ]);
 
-  function mergeFruits() {
-    for (let i = 0; i < fruits.length; i++) {
-      const a = fruits[i];
-      if (!a) continue;
-      for (let j = i + 1; j < fruits.length; j++) {
-        const b = fruits[j];
-        if (!b || a.fruitType !== b.fruitType) continue;
+    // 과일 데이터
+    const colors = ["#FF6B6B", "#FFD93D", "#6BCB77", "#4D96FF", "#C780FA", "#FFA07A", "#00CED1", "#FF69B4"];
+    const sizes = [14, 18, 22, 26, 32, 38, 46, 54];
+    const scores = [10,20,40,80,160,300,600,1000];
 
-        const dx = a.position.x - b.position.x;
-        const dy = a.position.y - b.position.y;
-        const dist = Math.sqrt(dx * dx + dy * dy);
-        const minDist = a.circleRadius + b.circleRadius;
+    let fruits = [], score = 0;
+    let currentType = randomType(), nextType = randomType();
 
-        if (dist < minDist * 0.8) {
-          const newType = a.fruitType + 1;
-          if (newType >= fruitSizes.length) continue;
+    // UI 요소
+    const scoreDiv = document.getElementById("score");
+    const previewCanvas = document.getElementById("preview");
+    const previewCtx = previewCanvas.getContext("2d");
+    const gameOverDiv = document.getElementById("gameOver");
 
-          const newRadius = fruitSizes[newType];
-          const newFruit = Bodies.circle((a.position.x + b.position.x)/2, (a.position.y + b.position.y)/2, newRadius, {
-            restitution: 0.2,
-            friction: 0.01,
-            render: { fillStyle: fruitColors[newType] }
-          });
-          newFruit.fruitType = newType;
+    function randomType() {
+      return Math.floor(Math.random()*3);
+    }
 
-          World.remove(world, a);
-          World.remove(world, b);
-          fruits[i] = null;
-          fruits[j] = null;
-          fruits.push(newFruit);
-          World.add(world, newFruit);
+    function drawPreview() {
+      const ctx = previewCtx;
+      const r = sizes[nextType];
+      ctx.clearRect(0,0,60,60);
+      ctx.beginPath();
+      ctx.arc(30,30,r,0,2*Math.PI);
+      ctx.fillStyle = colors[nextType];
+      ctx.fill();
+    }
+    drawPreview();
 
-          score += fruitScores[newType];
-          scoreDiv.textContent = "Score: " + score;
-          return;
+    // 과일 생성
+    function spawnFruit(x) {
+      const type = currentType;
+      const body = Bodies.circle(x, -20, sizes[type], {
+        restitution: 0.25, friction: 0.01,
+        render: { fillStyle: colors[type] }
+      });
+      body.fruitType = type;
+      fruits.push(body);
+      World.add(world, body);
+
+      currentType = nextType;
+      nextType = randomType();
+      drawPreview();
+    }
+
+    // 병합 로직
+    function mergeFruits() {
+      for(let i=0;i<fruits.length;i++){
+        const a = fruits[i]; if(!a) continue;
+        for(let j=i+1;j<fruits.length;j++){
+          const b = fruits[j]; if(!b||a.fruitType!==b.fruitType) continue;
+          const dx=a.position.x-b.position.x, dy=a.position.y-b.position.y;
+          const dist=Math.hypot(dx,dy);
+          const min = a.circleRadius + b.circleRadius;
+          if(dist<min*0.8){
+            const nt=a.fruitType+1;
+            if(nt>=sizes.length) continue;
+            const body = Bodies.circle((a.position.x+b.position.x)/2,(a.position.y+b.position.y)/2,sizes[nt],{
+              restitution:0.25, friction:0.01,
+              render:{ fillStyle: colors[nt] }
+            });
+            body.fruitType = nt;
+            World.add(world, body);
+            fruits.push(body);
+
+            World.remove(world, a);
+            World.remove(world, b);
+            fruits[i]=null; fruits[j]=null;
+
+            score += scores[nt];
+            scoreDiv.textContent = "Score: "+score;
+            return;
+          }
         }
       }
     }
-  }
 
-  Events.on(engine, "afterUpdate", () => {
-    mergeFruits();
-
-    for (const f of fruits) {
-      if (f && f.position.y < 0) {
-        gameOverDiv.style.display = "block";
-        Runner.stop(runner);
-        break;
+    Events.on(engine, "afterUpdate",()=>{
+      mergeFruits();
+      for(const f of fruits){
+        if(f && f.position.y < -50){
+          gameOverDiv.style.display = "block";
+          Runner.stop(engine);
+          break;
+        }
       }
+    });
+
+    // 터치/클릭 처리
+    function onPointerDown(e){
+      const x = e.clientX || (e.touches&&e.touches[0].clientX);
+      if(!x) return;
+      const rect = canvas.getBoundingClientRect();
+      spawnFruit(x - rect.left);
     }
-  });
+    canvas.addEventListener("pointerdown", onPointerDown);
 
-  function handleInput(e) {
-    const x = e.clientX || (e.touches && e.touches[0].clientX);
-    if (!x) return;
-    const rect = canvas.getBoundingClientRect();
-    const posX = x - rect.left;
-    spawnFruit(posX);
-  }
-
-  canvas.addEventListener("pointerdown", handleInput);
-</script>
+  </script>
 </body>
 </html>
